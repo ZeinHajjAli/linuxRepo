@@ -1,59 +1,5 @@
 # .bashrc
 
-# User prompt
-##########################################################################################################
-
-# get current branch in git repo
-function parse_git_branch() {
-	BRANCH=`git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'`
-	if [ ! "${BRANCH}" == "" ]
-	then
-		STAT=`parse_git_dirty`
-		echo "[${BRANCH}${STAT}]"
-	else
-		echo ""
-	fi
-}
-
-# get current status of git repo
-function parse_git_dirty {
-	status=`git status 2>&1 | tee`
-	dirty=`echo -n "${status}" 2> /dev/null | grep "modified:" &> /dev/null; echo "$?"`
-	untracked=`echo -n "${status}" 2> /dev/null | grep "Untracked files" &> /dev/null; echo "$?"`
-	ahead=`echo -n "${status}" 2> /dev/null | grep "Your branch is ahead of" &> /dev/null; echo "$?"`
-	newfile=`echo -n "${status}" 2> /dev/null | grep "new file:" &> /dev/null; echo "$?"`
-	renamed=`echo -n "${status}" 2> /dev/null | grep "renamed:" &> /dev/null; echo "$?"`
-	deleted=`echo -n "${status}" 2> /dev/null | grep "deleted:" &> /dev/null; echo "$?"`
-	bits=''
-	if [ "${renamed}" == "0" ]; then
-		bits=">${bits}"
-	fi
-	if [ "${ahead}" == "0" ]; then
-		bits="*${bits}"
-	fi
-	if [ "${newfile}" == "0" ]; then
-		bits="+${bits}"
-	fi
-	if [ "${untracked}" == "0" ]; then
-		bits="?${bits}"
-	fi
-	if [ "${deleted}" == "0" ]; then
-		bits="x${bits}"
-	fi
-	if [ "${dirty}" == "0" ]; then
-		bits="!${bits}"
-	fi
-	if [ ! "${bits}" == "" ]; then
-		echo " ${bits}"
-	else
-		echo ""
-	fi
-}
-
-export PS1="[ \u : \w \`parse_git_branch\`]: "
-
-##########################################################################################################
-
 # Source global definitions
 if [ -f /etc/bashrc ]; then
 	. /etc/bashrc
@@ -62,7 +8,7 @@ fi
 # User specific environment
 if ! [[ "$PATH" =~ "$HOME/.local/bin:$HOME/bin:" ]]
 then
-    PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+	PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 fi
 export PATH
 
@@ -70,40 +16,75 @@ export PATH
 # export SYSTEMD_PAGER=
 
 # User specific aliases and functions
+if [ -d ~/.bashrc.d ]; then
+	for rc in ~/.bashrc.d/*; do
+		if [ -f "$rc" ]; then
+			. "$rc"
+		fi
+	done
+fi
 
-alias :q='exit'
-alias :wq='exit'
-alias dirs='dirs -v'
-alias ls='ls -a --color'
-alias fuck='sudo $(history -p !!)'
-alias cheat='cht.sh'
-alias marktext='~/Programs/MarkText.AppImage'
+unset rc
 
-rtfm () {
-	$@ --help 2> /dev/null || man $@ 2> /dev/null || xdg-open "http://www.google.ca/search?q=$@";
-}
+alias tgz="tar -xzvf"
+alias ls="ls -lh --color"
+# alias fuck="sudo $(history -p !!)"
+alias ytdl-best="yt-dlp -f bestvideo+bestaudio"
+alias ytdl="yt-dlp"
 
 md () {
 	mkdir -p $1
 	cd $1
 }
 
-if [[ -n $SSH_CONNECTION ]] ; then
-	neofetch
-fi
+# Command to extract files
+extract () {
+	if [ -f "$1" ] ; then
+		case "$1" in
+       		*.tar.bz2)   tar xvjf "$1"		;;
+			*.tar.gz)    tar xvzf "$1"    	;;
+			*.bz2)       bunzip2 "$1"     	;;
+			*.rar)       unrar x "$1"     	;;
+			*.gz)        gunzip "$1"      	;;
+			*.tar)       tar xvf "$1"     	;;
+			*.tbz2)      tar xvjf "$1"    	;;
+			*.tgz)       tar xvzf "$1"    	;;
+			*.zip)       unzip "$1"       	;;
+			*.Z)         uncompress "$1"  	;;
+			*.7z)        7z x "$1"        	;;
+			*)           echo "I don't know how to extract $1..." ;;
+		esac
+	else
+		echo "'$1' is not a valid file!"
+	fi
+}
 
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/home/Zalamaan/anaconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/home/Zalamaan/anaconda3/etc/profile.d/conda.sh" ]; then
-        . "/home/Zalamaan/anaconda3/etc/profile.d/conda.sh"
-    else
-        export PATH="/home/Zalamaan/anaconda3/bin:$PATH"
-    fi
-fi
-unset __conda_setup
-# <<< conda initialize <<<
+# Add color in manpages for less
+export LESS_TERMCAP_mb=$'\E[01;31m'
+export LESS_TERMCAP_md=$'\E[01;31m'
+export LESS_TERMCAP_me=$'\E[0m'
+export LESS_TERMCAP_se=$'\E[0m'
+export LESS_TERMCAP_so=$'\E[01;44;33m'
+export LESS_TERMCAP_ue=$'\E[0m'
+export LESS_TERMCAP_us=$'\E[01;32m'
 
+# Scan all connected devices on router (Only works with routers with the same mask as home)
+alias lanscan="sudo nmap -sn 192.168.1.*"
+
+# Play just about anything web related that youtube-dl (yt-dlp) supports
+function webplay () {
+	ffplay -vf scale=720x480 "$(yt-dlp -g $1)";
+}
+
+function int-speed () {
+	curl -s https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py | python -;
+}
+
+# Start powerline Bash prompt
+if [ -f `which powerline-daemon` ];
+then
+	powerline-daemon -q
+	POWERLINE_BASH_CONTINUATION=1
+	POWERLINE_BASH_SELECT=1
+	. /usr/share/powerline/bash/powerline.sh
+fi
